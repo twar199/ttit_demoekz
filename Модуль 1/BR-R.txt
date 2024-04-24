@@ -1,0 +1,70 @@
+Модуль 1.
+
+Логин от ВМ: root либо locadm (используйте root, чтобы не вводить команду sudo каждый раз)
+Пароль от ВМ: P@ssw0rd
+
+Чтобы сохранить изменения в редакторе nano нажимайте Ctrl + O, после чего можно выйти - Ctrl + X
+
+1) Назначение имени: hostnamectl set-hostnamectl BR-R && newgrp
+   Назначение IP-адреса: nano /etc/network/interfaces, далее заполнение файла по шаблону:
+
+#IPv4 to ISP
+auto интерфейс_в_сторону_ISP
+iface интерфейс_в_сторону_ISP inet static
+address 10.0.20.2
+netmask 255.255.255.252
+gateway 10.0.20.1
+
+#IPv6 to ISP
+auto интерфейс_в_сторону_ISP
+iface интерфейс_в_сторону_ISP inet6 static
+address 2001::20:2
+netmask 126
+gateway 2001::20:1
+
+#IPv4 to BR-SRV
+auto интерфейс_в_сторону_BR-SRV
+iface интерфейс_в_сторону_BR-SRV inet static
+address 192.168.20.1
+netmask 255.255.255.240
+
+#IPv6 to BR-SRV
+auto интерфейс_в_сторону_BR-SRV
+iface интерфейс_в_сторону_BR-SRV inet6 static
+address 2001::2:1
+netmask 124
+
+Перезапуск службы интернета - systemctl restart networking
+
+2) Настройка внутренней динамической маршрутизации с помощью FRR: 
+   Установка FRR: apt update && apt install frr -y
+
+   ВАЖНО: nano /etc/sysctl.conf далее убираем решёточки (расскоментируем) следующие значения:
+   #net.ipv4.ip_forward=1 на net.ipv4.ip_forward=1
+   #net.ipv6.conf.all.forwarding=1 на net.ipv6.conf.all.forwarding=1
+   ПОСЛЕ ЧЕГО CTRL + O, CTRL + X, sysctl -p
+
+   Включение OSPF и OSPF6D в конфигурационном файле: nano /etc/frr/daemons, далее нужно изменить следующие строчки:
+   ospfd=no на ospfd=yes
+   ospf6d=no на ospf6d=yes
+
+   !!!ПЕРЕЗАПУСК FRR!!! - systemctl restart frr && systemctl enable frr
+   
+   Настройка OSPF: vtysh, conf t, router ospf, ospf router-id 3.3.3.3, network 192.168.20.0/28 area 3, network 10.0.20.0/30 area 0, do wr, ex, ex, ex
+   Настройка OSPF6: vtysh, conf t, router ospf6, ospf6 router-id 0.0.0.3, area 0.0.0.0 range 2001::2:0/124, area 0.0.0.0 range 2001::20:0/126, do wr, ex, ex, ex
+
+   !!!ПЕРЕЗАПУСК FRR!!! - systemctl restart frr
+
+3) Создание пользователей: 
+(Если не работает команда, попробуйте ввести с sudo)
+useradd -m -p P@ssw0rd branch_admin
+
+4) Составить backup скрипты на HQ-R и BR-R: nano backup.sh, далее появится чистое окно, вбиваем следующее:
+
+#!/bin/bash
+mkdir -p /mnt/backup
+tar -czf /mnt/backup/etc_backup.tar.gz /etc
+ls -lh /mnt/backup
+echo "Backup is done."
+
+После чего CTRL + O, CTRL + X, chmod +x ./backup.sh, ./backup.sh

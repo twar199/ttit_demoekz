@@ -1,0 +1,29 @@
+Модуль 1.
+
+Логин от ВМ: root либо locadm (используйте root, чтобы не вводить команду sudo каждый раз)
+Пароль от ВМ: P@ssw0rd
+
+Чтобы сохранить изменения в редакторе nano нажимайте Ctrl + O, после чего можно выйти - Ctrl + X
+
+1) Назначение имени: hostnamectl set-hostnamectl BR-SRV && newgrp
+   Назначение IP-адреса: nano /etc/network/interfaces, далее заполнение файла по шаблону:
+
+#IPv4 to BR-R
+auto интерфейс_в_сторону_BR-R
+iface интерфейс_в_сторону_BR-R inet static
+address 192.168.20.2
+netmask 255.255.255.240
+gateway 192.168.10.1
+
+#IPv6 to BR-R
+auto интерфейс_в_сторону_BR-R
+iface интерфейс_в_сторону_BR-R inet6 static
+address 2001::2:2
+netmask 124
+gateway 2001::2:1
+
+Перезапуск службы интернета - systemctl restart networking
+
+2) Создание пользователей: 
+(Если не работает команда, попробуйте ввести с sudo)
+useradd -m -p P@ssw0rd branch_admin

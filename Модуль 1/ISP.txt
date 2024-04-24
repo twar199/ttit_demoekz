@@ -1,0 +1,66 @@
+Модуль 1.
+
+Логин от ВМ: root либо locadm (используйте root, чтобы не вводить команду sudo каждый раз)
+Пароль от ВМ: P@ssw0rd
+
+Чтобы сохранить изменения в редакторе nano нажимайте Ctrl + O, после чего можно выйти - Ctrl + X
+
+1) Назначение имени: hostnamectl set-hostnamectl ISP && newgrp
+   Назначение IP-адреса: nano /etc/network/interfaces, далее заполнение файла по шаблону:
+
+#IPv4 to CLI
+auto интерфейс_в_сторону_CLI
+iface интерфейс_в_сторону_CLI inet static
+address 172.16.0.1
+netmask 255.255.255.252
+
+#IPv6 to CLI
+auto интерфейс_в_сторону_CLI
+iface интерфейс_в_сторону_CLI inet6 static
+address 2001::3:1
+netmask 120
+
+#IPv4 to HQ-R
+auto интерфейс_в_сторону_HQ-R
+iface интерфейс_в_сторону_HQ-R inet static
+address 10.0.10.1
+netmask 255.255.255.252
+
+#IPv6 to HQ-R
+auto интерфейс_в_сторону_HQ-R
+iface интерфейс_в_сторону_HQ-R inet6 static
+address 2001::10:1
+netmask 126
+
+#IPv4 to BR-R
+auto интерфейс_в_сторону_BR-R
+iface интерфейс_в_сторону_BR-R inet static
+address 10.0.20.1
+netmask 255.255.255.252
+
+#IPv6 to BR-R
+auto интерфейс_в_сторону_BR-R
+iface интерфейс_в_сторону_BR-R inet6 static
+address 2001::20:1
+netmask 126
+
+Перезапуск службы интернета - systemctl restart networking
+
+2) Настройка внутренней динамической маршрутизации с помощью FRR: 
+   Установка FRR: apt update && apt install frr -y
+
+   ВАЖНО: nano /etc/sysctl.conf далее убираем решёточки (расскоментируем) следующие значения:
+   #net.ipv4.ip_forward=1 на net.ipv4.ip_forward=1
+   #net.ipv6.conf.all.forwarding=1 на net.ipv6.conf.all.forwarding=1
+   ПОСЛЕ ЧЕГО CTRL + O, CTRL + X, sysctl -p
+
+   Включение OSPF и OSPF6D в конфигурационном файле: nano /etc/frr/daemons, далее нужно изменить следующие строчки:
+   ospfd=no на ospfd=yes
+   ospf6d=no на ospf6d=yes
+
+   !!!ПЕРЕЗАПУСК FRR!!! - systemctl restart frr && systemctl enable frr
+   
+   Настройка OSPF: vtysh, conf t, router ospf, ospf router-id 2.2.2.2, network 172.16.0.0/30 area 2, network 10.0.10.0/30 area 0, network 10.0.20.0/30 area 0, do wr, ex, ex, ex
+   Настройка OSPF6: vtysh, conf t, router ospf6, ospf6 router-id 0.0.0.2, area 0.0.0.0 range 2001::3:0/120, area 0.0.0.0 range 2001::10:0/126, area 0.0.0.0 range 2001::20:0/126, do wr, ex, ex, ex
+
+   !!!ПЕРЕЗАПУСК FRR!!! - systemctl restart frr

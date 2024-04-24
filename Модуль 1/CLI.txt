@@ -1,0 +1,29 @@
+Модуль 1.
+
+Логин от ВМ: root либо locadm (используйте root, чтобы не вводить команду sudo каждый раз)
+Пароль от ВМ: P@ssw0rd
+
+Чтобы сохранить изменения в редакторе nano нажимайте Ctrl + O, после чего можно выйти - Ctrl + X
+
+1) Назначение имени: hostnamectl set-hostnamectl CLI && newgrp
+   Назначение IP-адреса: nano /etc/network/interfaces, далее заполнение файла по шаблону:
+
+#IPv4 to ISP
+auto интерфейс_в_сторону_isp
+iface интерфейс_в_сторону_isp inet static
+address 172.16.0.2
+netmask 255.255.255.252
+gateway 172.16.0.1
+
+#IPv6 to ISP
+auto интерфейс_в_сторону_isp
+iface интерфейс_в_сторону_isp inet6 static
+address 2001::3:2
+netmask 120
+gateway 2001::3:1
+
+Перезапуск службы интернета - systemctl restart networking
+
+2) Создание пользователей:
+(Если не работает команда, попробуйте ввести с sudo) 
+useradd -m -p P@ssw0rd admin
