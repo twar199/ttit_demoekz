@@ -56,9 +56,21 @@ netmask 122
    !!!ПЕРЕЗАПУСК FRR!!! - systemctl restart frr
 
 3) Настройка DHCP (автоматической выдачи IP-адресов): apt install isc-dhcp-server radvd, nano /etc/default/isc-dhcp-server, после чего изменяем параметры: 
-INTERFACESv4="" на INTERFACESv4"имя_интерфейса_в_сторону_HQ-SRV имя_интерфейса_в_сторону_ISP" 
-(к примеру INTERFACESv4"ens36 ens37")
-По аналогии с INTERFACESv6, после чего CTRL + O, CTRL + X, nano /etc/dhcp/dhcpd.conf, всё удалить/закомментить и прописать следующее: Пропущено, так как дают очень мало баллов, делать относительно долго и куча багов.
+INTERFACESv4="" на INTERFACESv4"имя_интерфейса_в_сторону_HQ-SRV" 
+(к примеру INTERFACESv4"ens36")
+После чего CTRL + O, CTRL + X, rm /etc/dhcp/dhcpd.conf, nano /etc/dhcp/dhcpd.conf, прописать следующее:
+
+subnet 192.168.10.0 netmask 255.255.255.192 {
+range 192.168.10.2 192.168.10.63;
+option routers 192.168.10.1;
+}
+
+host HQ-SRV {
+hardware ethernet __:__:__:__:__:__: (здесь прописываете MAC-адрес интерфейса HQ-SRV в сторону HQ-R, на HQ-SRV можно его глянуть прописав команду ip a);
+fixed-address 192.168.10.2;
+}
+
+CTRL + O, CTRL + X, systemctl restart networking, после чего на HQ-SRV - nano /etc/network/interfaces и в строке iface имя_интерфейса_в_сторону_HQ-R inet static меняем на iface имя_интерфейса_в_сторону_HQ-R inet dhcp, статические параметры закомментировать, CTRL + O, CTRL + X, после чего dhclient имя_интерфейса_в_сторону_HQ-R -r, dhclient имя_интерфейса_в_сторону_HQ-R -v.
 
 4) Создание пользователей: 
 (Если не работает команда, попробуйте ввести с sudo)
