@@ -1,0 +1,63 @@
+Модуль 2.
+
+1) Сконфигурируйте веб-сервер LMS Apache на сервере BR-SRV: ПРИМЕЧАНИЕ: ЕСЛИ НЕТ ДОСТУПА ОТ CLI ДО BR-SRV, В VMWARE ДОБАВЛЯЕМ ВРЕМЕННОЕ ПОДКЛЮЧЕНИЕ 2 (ПО ЗАДАНИЮ МОЖНО) МЕЖДУ НИМИ: ПО АНАЛОГИИ С ВИРТУАЛЬНЫМИ СВИЧАМИ СОЗДАЕМ CLI - BR-SRV И НАЗНАЧЕМ НА ОДНОИМЕННЫЕ УСТРОЙСТВА, ПОСЛЕ ЧЕГО НАЗНАЧАЕМ IP-АДРЕС:
+
+К примеру на CLI:
+
+auto интерфейс_в_сторону_BR-SRV
+iface интерфейс_в_сторону_BR-SRV inet static
+address 172.16.2.2
+netmask 255.255.255.252
+gateway 172.16.2.1
+
+К примеру на BR-SRV:
+
+auto интерфейс_в_сторону_CLI
+iface интерфейс_в_сторону_CLI inet static
+address 172.16.2.1
+netmask 255.255.255.252
+
+После чего apt install apache2 libapache2-mod-php -y, nano /var/www/html/mesto.php и заполняем следующее:
+
+<?php
+$fontSize = "200px";
+echo "<div style=\"text-align:center\">";
+print '<p style="font-size:' .htmlspecialchars($fontSize). '; ">5(номер вашего места)</p>';
+?>
+
+CTRL + O, CTRL + X, nano /etc/apache2/apache2.conf и заполняем:
+
+Ищем <Directory /var/www/>
+             Options Indexes FollowSymLinks
+             AllowOverride None
+             Require all granted
+             Сюда добавляем: DirectoryIndex mesto.php
+      </Directory> 
+
+После чего CTRL + O, CTRL + X, systemctl restart apache2 && systemctl enable apache2, теперь заходим на CLI и в браузере вбиваем IP-адрес BR-SRV (192.168.20.2 либо если у вас временное подключение - 172.16.2.1)
+
+Следующим шагом: apt install gnupg, wget https://dev.mysql.com/get/mysql-apt-config_0.8.29-1_all.deb, dpkg -i mysql-apt-config_0.8.29-1_all.deb, после чего стрелками двигаем вниз на первую Ok и нажимаем Enter, apt update && apt install mysql-server php-mysql -y, после вводим P@ssw0rd и выбираем Use Strong Password Encryption (RECOMMENDED), apt install phpmyadmin -y, после чего жмём ПРОБЕЛ на apache2 и нажимаем Enter, после чего выбираем Yes, вводим P@ssw0rd
+
+Далее на CLI вбиваем в браузере: http://192.168.20.2/phpmyadmin/ (либо http://172.16.2.1/phpmyadmin/), вводим логин root и пароль P@ssw0rd, переходим во вкладку User accounts ---> Add user account, и заполняем:
+
+User name - Admin
+Password - P@ssw0rd
+Re-type - P@ssw0rd
+
+После чего жмём Go, переходим в User groups ---> Add user group, заполняем:
+
+Group name - Admin
+
+После чего жмём Go, User accounts overview и у Admin нажимаем edit user group, после чего выбираем Admin и нажимаем Go.
+
+ПО АНАЛОГИИ СОЗДАЕМ ДЛЯ: 
+Пользователя Manager1 (Группа Manager), 
+Пользователя Manager2 (Группа Manager),
+Пользователя Manager3 (Группа Manager),
+Пользователя User1 (Группа WS),
+Пользователя User2 (Группа WS),
+Пользователя User3 (Группа WS),
+Пользователя User4 (Группа WS),
+Пользователя User5 (Группа TEAM),
+Пользователя User6 (Группа TEAM),
+Пользователя User7 (Группа TEAM).
