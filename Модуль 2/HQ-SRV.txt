@@ -1,0 +1,196 @@
+Модуль 2.
+
+1) Настроить зоны DNS: ВЫПОЛНЯТЬ ПОСЛЕ 2-ГО ПУНКТА, через веб-интерфейс FreeIPA. ПРИМЕЧАНИЕ: ЕСЛИ НЕТ ДОСТУПА ОТ CLI ДО HQ-SRV, В VMWARE ДОБАВЛЯЕМ ВРЕМЕННОЕ ПОДКЛЮЧЕНИЕ (ПО ЗАДАНИЮ МОЖНО) МЕЖДУ НИМИ: ПО АНАЛОГИИ С ВИРТУАЛЬНЫМИ СВИЧАМИ СОЗДАЁМ CLI - HQ-SRV И НАЗНАЧЕМ НА ОДНОИМЕННЫЕ УСТРОЙСТВА, ПОСЛЕ ЧЕГО НАЗНАЧАЕМ IP-АДРЕС:
+
+К примеру на CLI:
+
+auto интерфейс_в_сторону_HQ-SRV
+iface интерфейс_в_сторону_HQ-SRV inet static
+address 172.16.1.2
+netmask 255.255.255.252
+gateway 172.16.1.1
+
+К примеру на HQ-SRV:
+
+auto интерфейс_в_сторону_CLI
+iface интерфейс_в_сторону_CLI inet static
+address 172.16.1.1
+netmask 255.255.255.252
+
+Далее вводим на CLI: nano /etc/hosts, и добавляем следующие строки:
+Изменяем 127.0.1.1 debian на 127.0.1.1 cli.hq.work cli
+Добавляем строку 172.16.1.1 hq-srv.hq.work и 192.168.10.2 hq-srv.hq.work
+
+После чего на CLI в браузере вводим: 172.16.1.1, логин admin, пароль P@ssw0rd, после чего переходим в Network Services ---> DNS ---> DNS Zones, нажимаем Add и заполняем:
+
+ДЛЯ УДОБСТВА ОБОЗНАЧУ: PTR записи создаются в обратной зоне (к примеру 10.168.192), а записи типа A в прямой зоне (к примеру hq.work.)
+
+Для зоны hq.work:
+Reverse zone IP network - 192.168.10.0/26, после чего жмём Add, переходим в только что созданную зону, Add и вводим:
+
+Record name - 2
+Record type - PTR
+Hostname - hq-srv.hq.work
+
+Выходим из обратной зоны (10.168.192) и в зоне hq.work. нажимаем Add и вводим:
+Record name - hq-srv
+Record type - A
+IP Address - 192.168.10.2
+
+В обратной зоне (10.168.192) снова нажимаем Add и вводим:
+Record name - 1
+Record type - PTR
+Hostname - hq-r.hq.work
+
+Выходим из обратной зоны (20.168.192) и в зоне hq.work. нажимаем Add и вводим:
+Record name - hq-r
+Record type - A
+IP Address - 192.168.10.1
+
+Далее переходим в DNS Zones, нажимаем Add и заполняем:
+
+Для зоны branch.work:
+Zone Name - branch.work, Add и заполняем:
+
+Record name - br-r
+Record type - A
+IP Address - 192.168.20.1
+
+Record name - br-srv
+Record type - A
+IP Address - 192.168.20.2
+
+Reverse zone IP network - 192.168.20.0/28, после чего жмём Add, переходим в только что созданную зону, Add и вводим:
+
+Record name - 1
+Record type - PTR
+Hostname - br-r.branch.work
+
+после чего на CLI в терминале вводим: nano /etc/resolv.conf и добавляем:
+nameserver 192.168.10.2
+nameserver 172.16.1.1 (в случае временного подключения)
+А на HQ-SRV: nano /etc/resolv.conf и добавляем: nameserver 127.0.0.1
+
+
+
+2) Настройте сервер домена выбор, его типа обоснуйте, на базе HQSRV через web интерфейс, выбор технологий обоснуйте: будем устанавливать FreeIPA используя docker-compose:
+apt update && apt install docker docker-compose -y, после чего docker pull freeipa/freeipa-server:centos-8-4.8.4, mkdir -p /var/lib/ipa-data, nano /etc/default/grub и изменяется следующее:
+
+GRUB_CMDLINE_LINUX="" на GRUB_CMDLINE_LINUX="quiet systemd.unified_cgroup_hierarchy=0"
+После чего CTRL + O, CTRL + X, grub-mkconfig -o /boot/grub/grub.cfg, перезапуск ВМ (reboot), 
+docker run --name freeipa-server -ti -h hq-srv.hq.work -p 80:80 -p 443:443 -p 389:389 -p 636:636 -p 88:88 -p 464:464 -p 88:88/udp -p 464:464/udp -p 123:123/udp --read-only --sysctl net.ipv6.conf.all.disable_ipv6=0 -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/ipa-data:/data:Z freeipa/freeipa-server:centos-8-4.8.4
+
+После успешного запуска необходимо заполнить форму:
+На вопрос о интеграции DNS пишем yes
+На вопрос о задании имени сервера нажимаем Enter
+На вопрос о подтверждение имени домена нажимаем Enter
+На вопрос о подтверждение имени области нажимаем Enter
+На запрос ввода пароля для менеджера директорий вводим P@ssw0rd
+На запрос ввода пароля для IPA админа вводим P@ssw0rd
+Все что далее связано с DNS вводим no
+На вопрос синхронизации с службой Chrony нажимаем Enter
+На вопрос о конфигурирование системы с текущими параметрами вводим
+yes
+Процесс установки достаточно длительный и может занимать около 5-10
+или более минут.
+
+После установки CTRL + P, CTRL + Q (если завис терминал), после чего на CLI пишем следующее: nano /etc/hosts, и добавляем следующие строки:
+Изменяем 127.0.1.1 debian на 127.0.1.1 cli.hq.work cli
+Добавляем строку 172.16.1.1 hq-srv.hq.work и 192.168.10.2 hq-srv.hq.work
+CTRL + O, CTRL + X, apt install freeipa-client -y, ipa-client-install --mkhomedir --domain hq.work --server=hq-srv.hq.work -
+p admin -W (СКОРЕЕ ВСЕГО НЕ СРАБОТАЕТ, ТАК КАК ПАКЕТА FREEIPA ДЛЯ DEBIAN - НЕТ. ОДНАКО ЛОЖНИКОВ В СВОЕЙ МЕТОДИЧКЕ МАГИЧЕСКИМ ОБРАЗОМ УСТАНОВИЛ КЛИЕНТ ФРИИПА ЭТИМИ КОМАНДАМИ, ТАК ЧТО ВСЕ ВОПРОСЫ К ЭТОМУ МАГУ. ОДНАКО ЕСТЬ ОДИН ВАРИАНТ КАК МОЖНО УСТАНОВИТЬ КЛИЕНТ ФРИИПА - ЧЕРЕЗ DOCKER)
+
+Для BR-SRV проделываем аналогичные действия:
+
+nano /etc/hosts, и добавляем следующие строки:
+Изменяем 127.0.1.1 debian на 127.0.1.1 br-srv.branch.work br-srv
+Добавляем строку 192.168.10.2 hq-srv.hq.work
+CTRL + O, CTRL + X, apt install freeipa-client -y, ipa-client-install --mkhomedir --domain branch.work --server=hq-srv.hq.work -p admin -W (СКОРЕЕ ВСЕГО НЕ СРАБОТАЕТ, ТАК КАК ПАКЕТА FREEIPA ДЛЯ DEBIAN - НЕТ. ОДНАКО ЛОЖНИКОВ В СВОЕЙ МЕТОДИЧКЕ МАГИЧЕСКИМ ОБРАЗОМ УСТАНОВИЛ КЛИЕНТ ФРИИПА ЭТИМИ КОМАНДАМИ, ТАК ЧТО ВСЕ ВОПРОСЫ К ЭТОМУ МАГУ. ОДНАКО ЕСТЬ ОДИН ВАРИАНТ КАК МОЖНО УСТАНОВИТЬ КЛИЕНТ ФРИИПА - ЧЕРЕЗ DOCKER)
+
+ВАЖНО!!! если вы перезагрузите машину, то контейнер
+выключится, для его запуска можно воспользоваться командой docker start
+freeipa-server
+
+3) Реализуйте файловый SMB или NFS (выбор обоснуйте) сервер на базе сервера HQ-SRV: apt install nfs-kernel-server, mkdir /mnt/all, mkdir /mnt/all/Branch_Files, mkdir /mnt/all/Network, mkdir /mnt/all/Admin_Files, touch /mnt/all/Branch_Files/123, touch /mnt/all/Network/234, touch /mnt/all/Admin_Files/345, 
+Далее nano /etc/exports и заполняем: 
+
+/mnt/all/Branch_Files *(rw,async,no_subtree_check)
+/mnt/all/Network *(rw,async,no_subtree_check)
+/mnt/all/Admin_Files *(rw,async,no_subtree_check)
+
+Далее переходим в веб-интерфейс FreeIPA используя CLI, логинимся, идём во вкладку Users, нажимаем Add и заполняем:
+
+user login — network_admin или branch_admin (то-бишь сначала создаете network_admin, жмёте Add и по аналогии branch_admin)
+first name — Network Admin или Branch Admin
+last name - Network Admin или Branch Admin
+New Password - 123
+Verify Password -123
+Пароль задаётся 123 , поскольку после захода в систему, необходимо будет
+сменить пароль
+
+После чего тыкаем на созданного пользователя в таблице (к примеру branch_admin) и меняем следующие параметры:
+
+Login Shell - с /bin/sh на /bin/bash
+Home Directory - с /home/branch_admin (или network_admin, всё что щас описывается нужно проделать для двоих пользователей, по аналогии для network_admin) на /home/branch_admin123 (для network_admin соответственно /home/network_admin123), после чего жмём Save.
+
+Если всё же получилось ввести CLI и BR-SRV в домен (смотрите мой комментарий в почти самом конце второго пункта) то тогда прописываем следующее на CLI и BR-SRV: apt install nfs-common libpam-mount -y, mkdir /mnt/all, nano /etc/security/pam_mount.conf.xml, после чего добавляем следующие строки:
+
+Необходимо добавить строки приведённые ниже в разделе <volume
+definitions>
+<volume user="admin" fstype="nfs" server="192.168.10.2 (либо если временное подключение 172.16.1.1)"
+path="/mnt/all/Admin_Files" mountpoint="/mnt/all" />
+<volume user="branch_admin" fstype="nfs" server="192.168.10.2 (либо если временное подключение 172.16.1.1)"
+path="/mnt/all/Branch_Files" mountpoint="/mnt/all" />
+<volume user="network_admin" fstype="nfs" server="192.168.10.2 (либо если временное подключение 172.16.1.1)"
+path="/mnt/all/Network" mountpoint="/mnt/all" />
+
+4) Запустите сервис MediaWiki используя docker на сервере HQ-SRV: apt update && apt install docker docker-compose -y, cd /home/admin, nano wiki.yml и заполняем СТРОГО СОХРАНЯЯ ОТСТУПЫ И ПРОБЕЛЫ (Заголовки первого порядка (Нажимаем один TAB
+или 2 пробела) , Второго порядка (2 TAB или 4 пробела), Третьего порядка
+(3 TAB или 6 пробелов).):
+
+version: '3'
+services:
+  db:
+    image: mysql
+    environment:
+      MYSQL_DATABASE: mediawiki
+      MYSQL_USER: wiki
+      MYSQL_PASSWORD: DEP@ssw0rd
+      MYSQL_ROOT_PASSWORD: DEP@ssw0rd
+    ports:
+      - "3306:3306"
+    volumes:
+      - /home/admin/dbvolume
+    restart: always
+
+  wiki:
+    image: mediawiki
+    ports:
+      - "8080:80"
+    restart: always
+    # volumes:
+    #   - /home/admin/LocalSettings.php:/var/www/html/LocalSettings.php
+
+CTRL + O, CTRL + X, docker-compose -f /home/admin/wiki.yml up, далее необходимо перейти на машину CLI , и в браузере перейти по
+адресу 192.168.10.2:8080 (либо 172.16.1.1:8080), после чего нажать set up the wiki и поменять следующие параметры:
+
+Database host - db
+Database name - mediawiki
+Database username - wiki
+Database password - DEP@ssw0rd
+
+Оставляем галку, нажимаем далее и снова заполняем следующее:
+
+Name of wiki - wiki
+Your username - Admin
+Password - DEP@ssw0rd
+Password again - DEP@ssw0rd
+
+ВНИМАНИЕ!!!!!! ВНИЗУ ВЫБИРАЕМ "I'm bored already, just install the wiki"
+
+После установки скачивается файл LocalSettings.php, его кидаем на HQ-SRV командой scp /home/locadm/Downloads/LocalSettings.php locadm@192.168.10.2(или 172.16.1.1 в случае временного подключения):/home/locadm, после чего на HQ-SRV cp /home/locadm/LocalSettings.php /home/admin/LocalSettings.php
+
+nano /home/admin/wiki.yml, и раскомментируем последние две строки, после чего снова запускаем контейнеры - docker-compose -f /home/admin/wiki.yml up
+
+Переходим в браузер, снова открываем MediaWiki, запросит $wgUpgradeKey, его можно найти в файле LocalSettings.php (он скачался на CLI, можно открыть и посмотреть ключ), после чего вводим его и установка завершится.
+
