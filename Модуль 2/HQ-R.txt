@@ -1,0 +1,15 @@
+Модуль 2.
+
+1) Настройте синхронизацию времени между сетевыми устройствами по протоколу NTP: timedatectl set-timezone Europe/Moscow (НА ВСЕХ ВМКАХ!!!), apt update && apt install chrony -y,
+далее nano /etc/chrony/chrony.conf и добавляем следующие строки: 
+local stratum 5
+allow 192.168.0.0/8
+allow 10.0.0.0/8
+CTRL + O, CTRL + X, systemctl restart chrony && systemctl enable chrony 
+
+ДАЛЬШЕ НА ВСЕХ ОСТАЛЬНЫХ СЕРВЕРАХ (КРОМЕ HQ-R!!!): 
+apt update && apt install chrony -y, nano /etc/chrony/chrony.conf, добавляем следующее:
+Комментируем pool 2.debian.pool.ntp.org iburst (добавляем решеточку перед этим параметром - #pool 2.debian.pool.ntp.org iburst), после чего дописываем: server 192.168.10.1, далее
+CTRL + O, CTRL + X, systemctl restart chrony && systemctl enable chrony
+
+Для проверки используйте команды chronyc tracking и chronyc sources
