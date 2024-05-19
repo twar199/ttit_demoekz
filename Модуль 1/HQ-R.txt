@@ -70,7 +70,7 @@ hardware ethernet __:__:__:__:__:__: (здесь прописываете MAC-а
 fixed-address 192.168.10.2;
 }
 
-CTRL + O, CTRL + X, systemctl restart networking, после чего на HQ-SRV - nano /etc/network/interfaces и в строке iface имя_интерфейса_в_сторону_HQ-R inet static меняем на iface имя_интерфейса_в_сторону_HQ-R inet dhcp, статические параметры закомментировать, CTRL + O, CTRL + X, после чего dhclient имя_интерфейса_в_сторону_HQ-R -r, dhclient имя_интерфейса_в_сторону_HQ-R -v.
+CTRL + O, CTRL + X, systemctl restart isc-dhcp-server && systemctl enable isc-dhcp-server, после чего на HQ-SRV - nano /etc/network/interfaces и в строке iface имя_интерфейса_в_сторону_HQ-R inet static меняем на iface имя_интерфейса_в_сторону_HQ-R inet dhcp, статические параметры закомментировать, CTRL + O, CTRL + X, после чего dhclient имя_интерфейса_в_сторону_HQ-R -r, dhclient имя_интерфейса_в_сторону_HQ-R -v.
 
 4) Создание пользователей: 
 (Если не работает команда, попробуйте ввести с sudo)
