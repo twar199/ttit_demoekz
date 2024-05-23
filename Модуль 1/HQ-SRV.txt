@@ -29,12 +29,12 @@ gateway 2001::1:1
 useradd -m -p P@ssw0rd admin
 
 3) Настройте подключение по SSH для удалённого
-конфигурирования устройства HQ-SRV по порту 2222.
+конфигурирования устройства HQ-SRV по порту 3035.
 Учтите, что вам необходимо перенаправить трафик на этот
 порт по средствам контролирования трафика: apt install iptables iptables-persistent ssh -y, nano /etc/ssh/sshd_config, далее расскоментируем и меняем значение:
-#Port 22 на Port 2222
+#Port 22 на Port 3035
 
-После CTRL + O, CTRL + X, systemctl restart ssh && systemctl enable ssh, iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
+После CTRL + O, CTRL + X, systemctl restart ssh && systemctl enable ssh, iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 3035
 
 4) Настройте контроль доступа до HQ-SRV по SSH со всех
-устройств, кроме CLI: iptables -A INPUT -p tcp --dport 2222 -s 0.0.0.0 -j ACCEPT, iptables -A INPUT -p tcp --dport 2222 -s 172.16.0.2 -j DROP,  iptables-save > /etc/iptables/rules.v4
+устройств, кроме CLI: iptables -A INPUT -p tcp --dport 3035 -s 0.0.0.0 -j ACCEPT, iptables -A INPUT -p tcp --dport 3035 -s 172.16.0.2 -j DROP,  iptables-save > /etc/iptables/rules.v4
