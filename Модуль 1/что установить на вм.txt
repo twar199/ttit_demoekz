@@ -1,0 +1,4 @@
+ISP - apt update && apt install frr iperf3 -y
+HQ-SRV - apt update && apt install iptables iptables-persistent ssh -y
+HQ-R - apt update && apt install frr isc-dhcp-server radvd iperf3 -y
+BR-R - apt update && apt install frr -y
